@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Teaching Materials — Kenneth Khoo</title>
+<style>
+  body{font-family:system-ui,-apple-system,sans-serif;max-width:720px;margin:2.5rem auto;padding:0 1rem;color:#1a1a1a;background:#fff;line-height:1.5}
+  a{color:#0b5fa5;text-decoration:none}
+  a:hover{text-decoration:underline}
+  @media(prefers-color-scheme:dark){body{color:#e6e6e6;background:#121212}a{color:#8ab4f8}}
+  h1{font-size:1.45rem;margin-bottom:.25rem}
+  h2{font-size:1.05rem;margin:2rem 0 .5rem}
+  .sub{font-size:.9rem;opacity:.7}
+  ul{list-style:none;padding:0;margin:0}
+  li{padding:.4rem 0;border-bottom:1px solid rgba(128,128,128,.25);display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+  .meta{font-size:.78rem;opacity:.6;white-space:nowrap;font-family:ui-monospace,monospace}
+</style>
+<h1>Teaching Materials</h1>
+<p class="sub">Lecture slides and syllabi by <a href="https://kennethkhoocy.github.io/">Kenneth Khoo</a>, National University of Singapore. Listed live from the <a href="https://github.com/kennethkhoocy/teaching-materials">repository</a>.</p>
+<div id="list">Loading…</div>
+<script>
+const REPO = 'kennethkhoocy/teaching-materials';
+const humanSize = b => b >= 1048576 ? (b/1048576).toFixed(1)+' MB' : b >= 1024 ? Math.round(b/1024)+' KB' : b+' B';
+fetch(`https://api.github.com/repos/${REPO}/git/trees/main?recursive=1`)
+  .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
+  .then(d => {
+    const skip = /^(readme\.md|license|index\.html|\.nojekyll)$/i;
+    const files = d.tree.filter(e => e.type === 'blob' && !skip.test(e.path.split('/').pop()));
+    const groups = {};
+    for (const f of files) {
+      const i = f.path.indexOf('/');
+      const g = i < 0 ? '' : f.path.slice(0, i);
+      (groups[g] ??= []).push(f);
+    }
+    // Sort within a group: non-numbered files (syllabus) first, then by lecture number.
+    const num = s => { const m = s.match(/^(\d+)/); return m ? +m[1] : -1; };
+    let html = '';
+    for (const g of Object.keys(groups).sort()) {
+      if (g) html += `<h2>${g}</h2>`;
+      html += '<ul>' + groups[g]
+        .sort((a, b) => {
+          const na = num(a.path.split('/').pop()), nb = num(b.path.split('/').pop());
+          return na !== nb ? na - nb : a.path.localeCompare(b.path);
+        })
+        .map(f => {
+          const name = f.path.split('/').pop();
+          const href = f.path.split('/').map(encodeURIComponent).join('/');
+          return `<li><a href="${href}" download>${name}</a><span class="meta">${humanSize(f.size)}</span></li>`;
+        }).join('') + '</ul>';
+    }
+    document.getElementById('list').innerHTML = html || 'No materials posted yet.';
+  })
+  .catch(() => {
+    document.getElementById('list').innerHTML =
+      'Listing unavailable — <a href="https://github.com/kennethkhoocy/teaching-materials">browse on GitHub</a>.';
+  });
+</script>
